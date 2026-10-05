@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kiểm tra trắc ngiệm toán 6 bài 9 </title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
+        .card { background: white; max-width: 600px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .ans-btn { display: block; width: 100%; margin: 10px 0; padding: 12px; border: 1px solid #ccc; border-radius: 5px; background: #fff; cursor: pointer; font-size: 16px; text-align: left; }
+        .ans-btn.selected { background: #3b82f6; color: white; border-color: #2563eb; }
+        .input-group { margin: 15px 0; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-main { background: #10b981; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- MÀN HÌNH 1: BẮT ĐẦU LÀM BÀI -->
+    <div id="start-screen" class="card">
+        <h2> ĐỀ KIỂM TRA BÀI 8-6A9</h2>
+        <p>Cấu trúc trò chơi: 10 Câu hỏi trắc nghiệm tính điểm nhanh (5.0 điểm)</p>
+        
+        <div class="input-group">
+            <label>👤 Họ và tên:</label>
+            <input type="text" id="student-name" placeholder="Nhập đầy đủ họ và tên...">
+        </div>
+        <div class="input-group">
+            <label>🏫 Lớp:</label>
+            <input type="text" id="student-class" placeholder="Nhập tên lớp (VD: 7A)...">
+        </div>
+        
+        <p style="color: #dc2626; font-weight: bold;">⚠ Bạn phải nhập đầy đủ Họ tên và Lớp mới có thể làm bài!</p>
+        <button class="btn-main" onclick="validateAndStart()">Bắt Đầu Làm Bài</button>
+    </div>
+
+    <!-- MÀN HÌNH 2: LÀM BÀI TRẮC NGHIỆM -->
+    <div id="quiz-screen" class="card" style="display:none;">
+        <h3 id="q-num" style="color: #1e3a8a;">Câu 1/10</h3>
+        <p id="q-text" style="font-size: 18px; font-weight: bold; margin: 20px 0;"></p>
+        <div id="ans-box"></div>
+        <br>
+        <button class="btn-main" style="background:#3b82f6;" onclick="nextQuestion()">Câu Tiếp Theo ➔</button>
+    </div>
+
+    <!-- MÀN HÌNH 3: HIỂN THỊ KẾT QUẢ KIỂM TRA -->
+    <div id="result-screen" class="card" style="display:none;">
+        <h2>📝 KẾT QUẢ KIỂM TRA</h2>
+        
+        <div id="score-section">
+            <p>Bạn đã hoàn thành bài kiểm tra.</p>
+            <h1 id="score-val" style="color: #10b981; font-size: 48px; margin: 10px 0;">0 / 10.0</h1>
+        </div>
+
+    
+         <p style="color: #2ecc71; text-align: center; font-weight: bold; margin-bottom: 20px;">✓ Hệ thống đã tự động lưu điểm số của bạn!</p>
+
+
+        <button id="btn-request-review" class="btn-main" style="background:#6b7280; margin: 5px;" onclick="unlockReview()">Xem Lại Đáp Án (Cần Pass)</button>
+             
+        <div id="review-panel" style="display:none; text-align: left; margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;"></div>
+    </div>
+
+    <script>
+    // =========================================================================
+    // CẤU HÌNH ĐƯỜNG LINK GOOGLE SHEETS WEB APP CỦA BẠN TẠI ĐÂY
+    // =========================================================================
+    const URL_GOOGLE_SHEET_WEBAPP = "https://script.google.com/macros/s/AKfycbxvIuh7_o_73OMGX9mm8MezztlcRANssMO1edENXwgSt3qNKUFT7wVM8jERWlT08i7g/exec"; // Hiện tại chưa có link sheet thì để trống thế này
+    const PASS_DE_THI = "lop6a10"; 
+
+    // CẤU HÌNH THỜI GIAN LÀM BÀI (15 phút = 900 giây)
+    const TONG_THOI_GIAN = 10 * 90; 
+    let thoiGianConLai = TONG_THOI_GIAN;
+    let bandoDeMnguoc;
+
+   // DANH SÁCH 10 CÂU HỎI MỚI CỦA BẠN
+    const originalQuestions = [
+        { q: "Cho các số tự nhiên a, b, m (Với a ≥ b và m ≠ 0). Nếu a ⁝ 3 và b ⁝ 3 thì khẳng định nào sau đây đúng?", a: ["(a + b) ⋮̸ 3", "(a - b) ⋮̸ 3", "(a + b) ⁝ 3", "a · b ⋮̸ 3"], c: 2},
+        { q: "Cho các số tự nhiên a, b, m (m ≠ 0). Nếu a ⁝ 5 và b ⋮̸ 5 thì khẳng định nào sau đây đúng về tổng a + b?", a: ["(a + b) ⁝ 5", "(a + b) ⋮̸ 5", "(a + b) luôn chia hết cho 10", "(a + b) ⁝ (a - b)"], c: 1 },
+        { q: "Số nào chia hết cho 2", a: ["579", "780", "425", "309"], c: 1 },
+        { q: "Theo tính chất chia hết của một tổng thì (80 + 25) chia hết cho số nào", a: ["5", "2", "10", "8"], c: 0 },
+        { q: "Số nào sau đây chia hết cho 9?", a: ["127", "73", "423", "16"], c: 2 },
+        { q: "Số 57 chia hết cho số nào? ", a: ["2", "5", "9", "3"], c: 3 }, 
+        { q: "Số nào chia hết cho cả 2 và 5?", a: ["8 ", "7 ", "30", "27"], c: 2},
+        { q: "Số nào chia hết cho cả 3 và 9? ", a: ["80", "15", "27", "14"], c: 2 },
+        { q: "Trong các khẳng định sau đây, khẳng định nào là khẳng định đúng?", a: ["25 chia hết cho 3", "75 chia hết cho 9", "42 chia hết cho 2", "17 chia hết cho 5"], c: 2},
+        { q: "Số nào chia hết cho cả 2,3,5,9:", a: ["738", "810", "762", "901 "], c: 1}
+    ];
+
+    let questions = []; 
+    let current = 0, score = 0, selected = null;
+    let cacheName = "", cacheClass = ""; 
+
+    function prepareQuestions() {
+        questions = JSON.parse(JSON.stringify(originalQuestions));
+        for (let i = questions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [questions[i], questions[j]] = [questions[j], questions[i]];
+        }
+        questions.forEach(qData => {
+            let correctText = qData.a[qData.c];
+            for (let i = qData.a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [qData.a[i], qData.a[j]] = [qData.a[j], qData.a[i]];
+            }
+            qData.c = qData.a.indexOf(correctText);
+        });
+    }
+
+    window.onload = function() {
+        if (localStorage.getItem('da_lam_bai8_6A9') === 'true') {
+            let diemCu = localStorage.getItem('diem_da_luu_bai8_6A9') || "0.0";
+            document.getElementById('score-val').innerText = diemCu + " / 5.0";
+            changeScreen('result-screen');
+            alert("Bạn đã hoàn thành bài tập này trước đó. Hệ thống tự động chuyển bạn đến trang xem lại đáp án!");
+            return;
+        }
+        changeScreen('start-screen');
+    };
+
+    function changeScreen(screenId) {
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById(screenId).style.display = 'block';
+    }
+
+    function validateAndStart() {
+        let inputName = document.getElementById('student-name').value.trim();
+        let inputClass = document.getElementById('student-class').value.trim();
+        if (inputName === "" || inputClass === "") {
+            alert("Vui lòng nhập đầy đủ cả Họ tên và Lớp trước khi làm bài!");
+            return;
+        }
+        let inputPassDe = prompt("Vui lòng nhập Mật khẩu đề thi do Giáo viên cung cấp để bắt đầu làm bài:");
+        if (inputPassDe === null) return;
+        if (inputPassDe !== PASS_DE_THI) {
+            alert("Mật khẩu đề thi không chính xác! Bạn không thể tham gia làm bài.");
+            return;
+        }
+        alert("Mật khẩu chính xác! Chúc bạn làm bài tốt.");
+        cacheName = inputName;   
+        cacheClass = inputClass; 
+        startQuiz();
+    }
+
+    function startQuiz() {
+        current = 0; score = 0; selected = null;
+        thoiGianConLai = TONG_THOI_GIAN; // Reset thời gian
+        prepareQuestions(); 
+        changeScreen('quiz-screen');
+        showQ();
+        batDauDemNgoc(); // Khởi chạy đồng hồ
+    }
+
+    function batDauDemNgoc() {
+        // Tạo một thẻ hiển thị đồng hồ nếu chưa có
+        let timerDiv = document.getElementById('timer-display');
+        if (!timerDiv) {
+            timerDiv = document.createElement('div');
+            timerDiv.id = 'timer-display';
+            timerDiv.style = "font-size: 20px; font-weight: bold; color: #dc2626; margin-bottom: 15px;";
+            const quizScreen = document.getElementById('quiz-screen');
+            quizScreen.insertBefore(timerDiv, quizScreen.firstChild);
+        }
+
+        bandoDeMnguoc = setInterval(function() {
+            if (thoiGianConLai <= 0) {
+                clearInterval(bandoDeMnguoc);
+                alert("Hết giờ làm bài! Hệ thống tự động nộp bài của bạn.");
+                endQuiz();
+            } else {
+                let phut = Math.floor(thoiGianConLai / 60);
+                let giay = thoiGianConLai % 60;
+                // Định dạng hiển thị 00:00
+                phut = phut < 10 ? '0' + phut : phut;
+                giay = giay < 10 ? '0' + giay : giay;
+                document.getElementById('timer-display').innerText = `⏱ Thời gian còn lại: ${phut}:${giay}`;
+                thoiGianConLai--;
+            }
+        }, 1000);
+    }
+
+    function showQ() {
+        selected = null;
+        const data = questions[current];
+        document.getElementById('q-num').innerText = `Câu ${current + 1}/${questions.length}`;
+        document.getElementById('q-text').innerText = data.q;
+
+        const box = document.getElementById('ans-box');
+        box.innerHTML = '';
+        data.a.forEach((ans, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'ans-btn';
+            btn.innerText = ans;
+            btn.onclick = function() {
+                selected = idx;
+                document.querySelectorAll('.ans-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            };
+            box.appendChild(btn);
+        });
+    }
+
+    function nextQuestion() {
+        if (selected === null) {
+            alert("Bạn hãy chọn 1 đáp án trước nhé!");
+            return;
+        }
+        if (selected === questions[current].c) {
+            score++;
+        }
+        if (current < questions.length - 1) {
+            current++;
+            showQ();
+        } else {
+            endQuiz();
+        }
+    }
+
+    function endQuiz() {
+        clearInterval(bandoDeMnguoc); // Dừng đồng hồ đếm ngược lại khi hoàn thành
+        let finalScore = ((score / questions.length) * 5).toFixed(1);
+        
+        localStorage.setItem('da_lam_bai8_6A9', 'true');
+        localStorage.setItem('diem_da_luu_bai8_6A9', finalScore);
+
+        document.getElementById('score-val').innerText = finalScore + " / 5.0";
+        changeScreen('result-screen');
+
+        if (URL_GOOGLE_SHEET_WEBAPP && URL_GOOGLE_SHEET_WEBAPP !== "") {
+            let dataGui = { hoten: cacheName, lop: cacheClass, diem: parseFloat(finalScore) };
+            fetch(URL_GOOGLE_SHEET_WEBAPP, {
+                method: "POST",
+                mode: "cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(dataGui)
+            })
+            .then(response => response.json())
+            .then(res => console.log("Gửi thành công."))
+            .catch(err => console.error(err));
+        }
+    }
+
+    function unlockReview() {
+        let inputPass = prompt("Nhập mật khẩu Giáo viên để xem đáp án:");
+        if (inputPass === PASS_XEM_DAP_AN) {
+            alert("Mật khẩu chính xác!");
+            document.getElementById('btn-request-review').style.display = 'none';
+            const panel = document.getElementById('review-panel');
+            panel.innerHTML = '<h3 style="margin-top:0; color:#1e3a8a;">Danh sách đáp án chính xác:</h3>';
+            originalQuestions.forEach((item, idx) => {
+                panel.innerHTML += `
+                    <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                        <strong>Câu ${idx + 1}: ${item.q}</strong><br>
+                        <span style="color:#10b981;">➔ Đáp án đúng: ${item.a[item.c]}</span>
+                    </div>`;
+            });
+            panel.style.display = 'block';
+        } else if (inputPass !== null) {
+            alert("Mật khẩu không chính xác!");
+        }
+    }
+
+    function resetQuiz() {
+        localStorage.clear(); 
+        window.location.replace(window.location.href); 
+    }
+
+</script>
+
+</body>
+</html>
+
